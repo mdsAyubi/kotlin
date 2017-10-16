@@ -31,6 +31,7 @@ object JsMultipleInheritanceChecker : SimpleDeclarationChecker {
             FqNameUnsafe("kotlin.CharSequence.get"),
             FqNameUnsafe("kotlin.collections.CharIterator.nextChar")
     )
+    private val simpleNames = fqNames.mapTo(mutableSetOf()) { it.shortName() }
 
     override fun check(
             declaration: KtDeclaration, descriptor: DeclarationDescriptor,
@@ -38,7 +39,7 @@ object JsMultipleInheritanceChecker : SimpleDeclarationChecker {
     ) {
         if (descriptor !is ClassDescriptor) return
 
-        for (callable in descriptor.unsubstitutedMemberScope.getContributedDescriptors { true }
+        for (callable in descriptor.unsubstitutedMemberScope.getContributedDescriptors { it in simpleNames }
                 .filterIsInstance<CallableMemberDescriptor>()) {
             if (callable.overriddenDescriptors.size > 1 && callable.overriddenDescriptors.any { it.fqNameUnsafe in fqNames }) {
                 diagnosticHolder.report(ErrorsJs.WRONG_MULTIPLE_INHERITANCE.on(declaration, callable))
