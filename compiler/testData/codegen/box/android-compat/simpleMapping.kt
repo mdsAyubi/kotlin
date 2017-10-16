@@ -4,7 +4,7 @@
 // FILE: View.java
 import kotlin.android.Compat;
 
-@Compat(ViewCompat.class)
+@Compat("ViewCompat")
 public class View {
     public boolean noArgs() { return false; }
     public boolean subtype() { return false; }
@@ -26,7 +26,7 @@ public class View {
 // FILE: SubView.java
 import kotlin.android.Compat;
 
-@Compat(SubViewCompat.class)
+@Compat("SubViewCompat")
 public class SubView extends View {
     @Override public boolean subtypeOverride() { return false; } // todo: do we need to compat this?
     public boolean superInCompat() { return true; }
@@ -36,7 +36,7 @@ public class SubView extends View {
 // FILE: AnotherView.java
 import kotlin.android.Compat;
 
-@Compat(ViewCompat.class)
+@Compat("ViewCompat")
 public class AnotherView {
     public boolean inAnotherView() { return false; }
 }
@@ -74,7 +74,7 @@ public class SubViewCompat {
 // FILE: Movable.java
 import kotlin.android.Compat;
 
-@Compat(MovableCompat.class)
+@Compat("MovableCompat")
 public interface Movable {
     boolean move();
 }

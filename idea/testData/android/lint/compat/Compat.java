@@ -21,5 +21,5 @@ import java.lang.annotation.*;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.CLASS)
 public @interface Compat {
-    Class value();
+    String value();
 }

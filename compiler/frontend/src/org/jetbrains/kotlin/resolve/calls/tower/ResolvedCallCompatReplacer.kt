@@ -21,9 +21,10 @@ import org.jetbrains.kotlin.descriptors.CallableDescriptor
 import org.jetbrains.kotlin.descriptors.ClassDescriptor
 import org.jetbrains.kotlin.descriptors.annotations.AnnotationDescriptor
 import org.jetbrains.kotlin.descriptors.synthetic.SyntheticMemberDescriptor
-import org.jetbrains.kotlin.load.java.descriptors.JavaClassDescriptor
+import org.jetbrains.kotlin.incremental.components.NoLookupLocation
 import org.jetbrains.kotlin.load.java.descriptors.JavaMethodDescriptor
 import org.jetbrains.kotlin.name.FqName
+import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtImplicitThisExpression
 import org.jetbrains.kotlin.psi.KtPsiFactory
@@ -33,13 +34,13 @@ import org.jetbrains.kotlin.resolve.calls.model.ExpressionValueArgument
 import org.jetbrains.kotlin.resolve.calls.model.ResolvedCallImpl
 import org.jetbrains.kotlin.resolve.calls.tasks.ExplicitReceiverKind
 import org.jetbrains.kotlin.resolve.calls.util.CallMaker
+import org.jetbrains.kotlin.resolve.descriptorUtil.module
 import org.jetbrains.kotlin.resolve.scopes.MemberScope
 import org.jetbrains.kotlin.resolve.scopes.SyntheticScopes
 import org.jetbrains.kotlin.resolve.scopes.getDescriptorsFiltered
 import org.jetbrains.kotlin.resolve.scopes.receivers.ExpressionReceiver
 import org.jetbrains.kotlin.resolve.scopes.receivers.ImplicitReceiver
 import org.jetbrains.kotlin.types.KotlinType
-import org.jetbrains.kotlin.types.SimpleType
 import org.jetbrains.kotlin.types.checker.KotlinTypeChecker
 import org.jetbrains.kotlin.types.typeUtil.supertypes
 import java.lang.IllegalStateException
@@ -99,12 +100,24 @@ internal class ResolverCallCompatReplacerImpl : ResolvedCallCompatReplacer() {
     }
 
     // Find all compat classes of the type and its supertypes including interfaces
+    // TODO: Replace IllegalStateException with errors reporting
     private fun findCompatClasses(origin: ClassDescriptor): OriginToCompatMap {
         val res = hashMapOf<ClassDescriptor, ClassDescriptor>()
         for ((t, annotation) in findCompatAnnotations(origin)) {
             val annotationValue = annotation.argumentValue("value") ?: throw IllegalStateException("Compat annotation must have value")
-            val compatType = annotationValue as? SimpleType ?: throw IllegalStateException("$annotationValue must be class")
-            res[t] = compatType.constructor.declarationDescriptor as? ClassDescriptor ?: throw IllegalStateException("Compat must be a class")
+            val valueString = annotationValue as? String ?: throw IllegalStateException("$annotationValue must be string")
+            var packageName = ""
+            var className = valueString
+            if (valueString.contains('.')) {
+                packageName = valueString.substring(0, valueString.lastIndexOf('.'))
+                className = valueString.substring(valueString.lastIndexOf('.') + 1)
+            }
+            val compatDescriptor = t.module
+                                           .getPackage(FqName(packageName))
+                                           .memberScope
+                                           .getContributedClassifier(Name.identifier(className), NoLookupLocation.WHEN_FIND_BY_FQNAME) as? ClassDescriptor
+                                   ?: throw IllegalStateException("Compat must be a class")
+            res[t] = compatDescriptor
         }
         return res
     }
